@@ -1,197 +1,25 @@
-# ─────────────────────────────────────────────────────────────
-# Python
-# ─────────────────────────────────────────────────────────────
+# environments
+.venv/
+venv/
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
-.conda/
-conda-env/
-
-# Packaging / dependency caches
-pip-wheel-metadata/
-.pdm.toml
-poetry.lock.bak
-
-# ─────────────────────────────────────────────────────────────
-# Jupyter / notebooks
-# ─────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
-*/.ipynb_checkpoints/*
-profile_default/
-ipython_config.py
 
-# Uncomment ONLY if you strip outputs before committing (nbstripout).
-# Otherwise keep notebook outputs — graders want to see EDA plots.
-# *.ipynb
+# raw evidence - too large for git, delivered as a separate archive
+data/raw_html/
+data/images/
 
-# ─────────────────────────────────────────────────────────────
-# Testing / linting / type caches
-# ─────────────────────────────────────────────────────────────
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-coverage.xml
-htmlcov/
-.tox/
-
-# ─────────────────────────────────────────────────────────────
-# Secrets & environment  (NEVER commit these)
-# ─────────────────────────────────────────────────────────────
-.env
-.env.*
-!.env.example
-secrets.toml
-.streamlit/secrets.toml
-*.pem
-*.key
-credentials.json
-
-# ─────────────────────────────────────────────────────────────
-# Scraped raw evidence — bulky, keep folders but ignore contents
-# Commit a SMALL sample instead (see un-ignore rules below)
-# ─────────────────────────────────────────────────────────────
-data/raw_html/**
-!data/raw_html/.gitkeep
-!data/raw_html/sample/
-!data/raw_html/sample/**
-
-data/images/**
-!data/images/.gitkeep
-!data/images/sample/
-!data/images/sample/**
-
-# Compressed evidence bundles (share via Drive / release asset, not git)
-*.zip
-*.tar
-*.tar.gz
-*.7z
-*.rar
-
-# ─────────────────────────────────────────────────────────────
-# Datasets
-# Small cleaned CSVs SHOULD be committed (they're deliverables).
-# Large raw dumps should not. Adjust the size split to taste.
-# ─────────────────────────────────────────────────────────────
+# generated
 data/raw/*.jsonl
-data/raw/*.json
-data/interim/**
-!data/interim/.gitkeep
+data/final/*
+logs/*.csv
+logs/*.log
+artifacts/*
+reports/*.csv
 
-# Un-ignore the deliverable datasets explicitly
-!data/processed/*.csv
-!data/final/*.csv
-!data/final/*.xlsx
+# keep folders
+!**/.gitkeep
 
-# Generic heavy formats
-*.parquet
-*.feather
-*.db
-*.sqlite
-*.sqlite3
-*.h5
-*.hdf5
-
-# ─────────────────────────────────────────────────────────────
-# Logs
-# Keep logs/request_log.csv — it is a required deliverable.
-# ─────────────────────────────────────────────────────────────
-logs/**
-!logs/.gitkeep
-!logs/request_log.csv
-!logs/request_log_*.csv
-*.log
-debug.log
-nohup.out
-
-# ─────────────────────────────────────────────────────────────
-# Model artifacts & embeddings
-# Small .joblib models are fine to commit; big embedding matrices
-# and transformer weights are not.
-# ─────────────────────────────────────────────────────────────
-artifacts/**/*.npy
-artifacts/**/*.npz
-artifacts/**/*.pt
-artifacts/**/*.pth
-artifacts/**/*.bin
-artifacts/**/*.safetensors
-artifacts/**/*.onnx
-!artifacts/.gitkeep
-!artifacts/**/*.joblib
-!artifacts/**/*.pkl
-!artifacts/**/metrics.json
-!artifacts/**/*.md
-
-# Hugging Face / torch / CLIP download caches
-.cache/
-~/.cache/huggingface/
-transformers_cache/
-sentence_transformers_cache/
-torch_cache/
-
-# MLflow / W&B if you use them
-mlruns/
-wandb/
-
-# ─────────────────────────────────────────────────────────────
-# Playwright / Selenium
-# ─────────────────────────────────────────────────────────────
-playwright-report/
-test-results/
-.playwright/
-ms-playwright/
-browser_profile/
-user_data_dir/
-*.har
-screenshots/
-!screenshots/.gitkeep
-geckodriver.log
-chromedriver.log
-
-# ─────────────────────────────────────────────────────────────
-# Streamlit
-# ─────────────────────────────────────────────────────────────
-.streamlit/cache/
-.streamlit/runtime/
-
-# ─────────────────────────────────────────────────────────────
-# Editors / IDEs
-# ─────────────────────────────────────────────────────────────
-.vscode/
-!.vscode/settings.json.example
-.idea/
-*.swp
-*.swo
-*~
-
-# ─────────────────────────────────────────────────────────────
-# OS junk
-# ─────────────────────────────────────────────────────────────
+# local
+.env
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# ─────────────────────────────────────────────────────────────
-# Misc scratch
-# ─────────────────────────────────────────────────────────────
-scratch/
-tmp/
-temp/
-notebooks/scratch_*.ipynb
