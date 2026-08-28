@@ -4,16 +4,16 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
-data/*.jsonl
-data/*.csv
-!data/keywords.csv
-data/debug/
-data/images/
-data/clean/*
-logs/*.csv
-logs/*.txt
-models/*
-!**/.gitkeep
+#data/*.jsonl
+#data/*.csv
+#!data/keywords.csv
+#data/debug/
+#data/images/
+#data/clean/*
+#logs/*.csv
+#logs/*.txt
+#models/*
+#!**/.gitkeep
 
 .env
 .DS_Store

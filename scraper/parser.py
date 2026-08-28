@@ -20,6 +20,38 @@ from bs4 import BeautifulSoup
 
 from scraper import selectors
 
+
+# ---------------------------------------------------------------------------
+# HTML ENGINE
+# ---------------------------------------------------------------------------
+# lxml is fast and accurate, but it is a compiled package and is sometimes
+# missing from a fresh virtual environment. Rather than crash with
+# "FeatureNotFound: Couldn't find a tree builder", fall back to Python's
+# built-in parser, which needs no installation.
+#
+# html.parser is slower and slightly more forgiving about broken markup, so
+# install lxml when you can:  pip install lxml
+def _pick_engine():
+    try:
+        BeautifulSoup("<a></a>", "lxml")
+        return "lxml"
+    except Exception:
+        import warnings
+        warnings.warn(
+            "lxml is not installed - falling back to html.parser. "
+            "Run 'pip install lxml' for faster, more accurate parsing.",
+            RuntimeWarning,
+        )
+        return "html.parser"
+
+
+HTML_ENGINE = _pick_engine()
+
+
+def soup_of(markup):
+    """Build a BeautifulSoup object with whichever engine is available."""
+    return BeautifulSoup(markup, HTML_ENGINE)
+
 # ===========================================================================
 # TINY HELPERS
 # ===========================================================================
@@ -131,6 +163,24 @@ def _count(raw):
     return int(digits) if digits else None
 
 
+def _helpful_count(raw):
+    """
+    'One person found this helpful'  -> 1
+    '27 people found this helpful'   -> 27
+
+    Amazon spells out a count of one, so a plain digit-strip returns None for
+    exactly the reviews that DID get a vote. That is worse than useless.
+    """
+    if not raw:
+        return None
+    digits = re.sub(r"[^\d]", "", raw)
+    if digits:
+        return int(digits)
+    if "one person" in raw.lower():
+        return 1
+    return None
+
+
 # ===========================================================================
 # 1. SEARCH RESULTS PAGE
 # ===========================================================================
@@ -149,7 +199,7 @@ def parse_search(html):
     bug. Amazon uses a list layout for electronics (fewer, larger cards) and a
     grid layout for fashion and home goods (many small cards). Both are page 1.
     """
-    soup = BeautifulSoup(html, "lxml")
+    soup = soup_of(html)
     results = []
     seen = set()
     rank = 0
@@ -466,7 +516,7 @@ def parse_reviews(soup):
             "date": _clean(date_match.group(1)) if date_match else raw_date,
             "country": _clean(country_match.group(1)) if country_match else None,
             "verified_purchase": _exists(block, selectors.REVIEW_VERIFIED),
-            "helpful_votes": _count(_text(block, selectors.REVIEW_HELPFUL)),
+            "helpful_votes": _helpful_count(_text(block, selectors.REVIEW_HELPFUL)),
         })
 
     # Drop entries that have neither a rating nor text - layout artefacts.
@@ -497,7 +547,7 @@ def parse_product(html, asin, keyword, product_url, rank=None, sponsored=False):
     collected for completeness, but they must NOT be used as input features
     when predicting price tier. Price may only be used to create the labels.
     """
-    soup = BeautifulSoup(html, "lxml")
+    soup = soup_of(html)
 
     price_text = _text(soup, selectors.PRICE)
     price, currency = _price(price_text)

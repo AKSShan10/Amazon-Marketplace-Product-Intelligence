@@ -141,15 +141,36 @@ REVIEW_RATING = [
     "span.a-icon-alt",
 ]
 
+# Amazon has several review layouts and changes them regularly. If title or
+# body come back null, run:  python main.py debug-review
+# It prints the live markup and tells you which selector to add here.
 REVIEW_TITLE = [
+    # --- CURRENT LAYOUT (Amazon switched to camelCase hooks) ---
+    "h5[data-hook='reviewTitle']",
+    "[data-hook='reviewTitle']",
+    # --- older layouts, kept as fallbacks ---
+    "a[data-hook='review-title'] span.cr-original-review-content",
     "a[data-hook='review-title'] span:not([class])",
     "a[data-hook='review-title'] span",
     "span[data-hook='review-title'] span",
     "a[data-hook='review-title']",
+    "span[data-hook='review-title']",
 ]
 
 REVIEW_BODY = [
+    # --- CURRENT LAYOUT ---
+    # The review text lives in reviewRichContentContainer. Do NOT use
+    # data-hook='reviewText' - that wrapper also contains the accessibility
+    # teaser text ("Brief content visible, double tap to read full content"),
+    # which would be captured instead of the actual review.
+    "div[data-hook='reviewRichContentContainer'] p span",
+    "div[data-hook='reviewRichContentContainer']",
+    "[data-hook='reviewRichContentContainer']",
+    # --- older layouts, kept as fallbacks ---
+    "span[data-hook='review-body'] span.cr-original-review-content",
+    "div[data-hook='review-collapsed'] span",
     "span[data-hook='review-body'] span",
+    "span.review-text-content span",
     "span[data-hook='review-body']",
 ]
 

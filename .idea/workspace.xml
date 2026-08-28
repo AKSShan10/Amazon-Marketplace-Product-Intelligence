@@ -4,7 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f2fd8874-04c1-45b8-ae17-5c37d085a6f7" name="Changes" comment="" />
+    <list default="true" id="f2fd8874-04c1-45b8-ae17-5c37d085a6f7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/keywords.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/keywords.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/data_flow.mermaid" beforeDir="false" afterPath="$PROJECT_DIR$/docs/data_flow.mermaid" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/browser.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/browser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/fetch.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/fetch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/images.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/images.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/logs.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/logs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/selectors.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/selectors.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/spotcheck.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/spotcheck.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scraper/storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/scraper/storage.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -19,11 +37,11 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 7
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
   <component name="ProjectId" id="3IVWmJobqUyJHfBPlSm33jtN8nc" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -31,8 +49,13 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "b1",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "b2",
     "last_opened_file_path": "D:/BJIT/Amazon-Marketplace-Product-Intelligence",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -45,8 +68,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-PY-241.17890.14" />
-        <option value="bundled-python-sdk-5b207ade9991-7e9c3bbb6e34-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-241.17890.14" />
+        <option value="bundled-python-sdk-245168a56dbd-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.25134.203" />
       </set>
     </attachedChunks>
   </component>
@@ -59,6 +81,7 @@
       <option name="presentableId" value="Default" />
       <updated>1787850376252</updated>
       <workItem from="1787850377689" duration="12654000" />
+      <workItem from="1787882254629" duration="384000" />
     </task>
     <servers />
   </component>

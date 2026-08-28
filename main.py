@@ -29,8 +29,6 @@ def cmd_test(args):
     whether anything has changed. In particular it checks REVIEW STAR RATINGS,
     which are the entire label source for Feature B.
     """
-    from bs4 import BeautifulSoup
-
     from scraper import selectors
     from scraper.browser import Browser
     from scraper.collect import product_url, search_url
@@ -129,6 +127,147 @@ def cmd_report(args):
     """Print the M1 completeness report."""
     from scraper.storage import report
     report()
+    return 0
+
+
+def cmd_refresh_reviews(args):
+    """
+    Re-fetch only the reviews for products already collected.
+
+    Use this after fixing a review selector: it keeps every other field
+    (images, video, price) and replaces just the reviews.
+
+        python main.py refresh-reviews --status    what needs fixing
+        python main.py refresh-reviews             re-fetch (resumable)
+        python main.py refresh-reviews --apply     merge results in
+    """
+    from scraper.refresh import apply, run, status
+
+    if args.status:
+        status()
+    elif args.apply:
+        apply()
+    else:
+        run(limit=args.limit, refresh_all=args.all)
+    return 0
+
+
+def cmd_debug_review(args):
+    """
+    Dump the raw HTML of one real review block.
+
+    Use this when a review field comes back null. It shows Amazon's CURRENT
+    markup, so you can see the right selector instead of guessing, then add it
+    to scraper/selectors.py.
+    """
+    from scraper import selectors
+    from scraper.browser import Browser
+    from scraper.collect import product_url, search_url
+    from scraper.fetch import fetch
+    from scraper.parser import parse_search, soup_of
+
+    keyword = args.keyword or "gaming mouse"
+
+    with Browser() as browser:
+        browser.warm_up()
+
+        if args.asin:
+            asin = args.asin
+        else:
+            html = fetch(browser, search_url(keyword), keyword, "search",
+                         anchor=selectors.SEARCH_CONTAINER)
+            if not html:
+                print("\n  Could not load the search page.\n")
+                return 1
+            listings = parse_search(html)
+            if not listings:
+                print("\n  No listings found.\n")
+                return 1
+            asin = next((l["asin"] for l in listings if not l["sponsored"]),
+                        listings[0]["asin"])
+
+        url = product_url(asin)
+        print(f"\n  Loading {url}\n")
+        page = fetch(browser, url, keyword, "product", asin=asin,
+                     anchor=selectors.PRODUCT_ANCHOR)
+        if not page:
+            print("  Could not load the product page.\n")
+            return 1
+
+    soup = soup_of(page)
+
+    # 1. Which review-block selector matches?
+    print("=" * 70)
+    print("  WHICH SELECTORS MATCH ON THIS PAGE")
+    print("=" * 70)
+
+    checks = [
+        ("REVIEW_BLOCK", selectors.REVIEW_BLOCK),
+        ("REVIEW_RATING", selectors.REVIEW_RATING),
+        ("REVIEW_TITLE", selectors.REVIEW_TITLE),
+        ("REVIEW_BODY", selectors.REVIEW_BODY),
+        ("REVIEW_AUTHOR", selectors.REVIEW_AUTHOR),
+    ]
+    for name, chain in checks:
+        print(f"\n  {name}")
+        for sel in chain:
+            try:
+                n = len(soup.select(sel))
+            except Exception:
+                n = "bad selector"
+            mark = "MATCH" if isinstance(n, int) and n > 0 else "  -  "
+            print(f"    [{mark}] {n:>4}  {sel}")
+
+    # 2. Extra candidates worth testing
+    print("\n" + "=" * 70)
+    print("  OTHER CANDIDATES")
+    print("=" * 70)
+    candidates = [
+        "div[data-hook='review-collapsed'] span",
+        "span.review-text-content span",
+        "span.cr-original-review-content",
+        "div.reviewText span",
+        "span[data-hook='review-body'] div span",
+        "div[data-hook='review'] div.a-row.a-spacing-small.review-data span",
+        "span[data-hook='review-title'] span.cr-original-review-content",
+        "a[data-hook='review-title'] span.cr-original-review-content",
+        "div[data-hook='review-title']",
+        "[class*='review-text']",
+        "[class*='review-title']",
+    ]
+    for sel in candidates:
+        try:
+            found = soup.select(sel)
+        except Exception:
+            continue
+        if found:
+            sample = found[0].get_text(" ", strip=True)[:70]
+            print(f"    [MATCH] {len(found):>4}  {sel}")
+            print(f"                  -> {sample!r}")
+
+    # 3. Raw HTML of the first review block
+    block = None
+    for sel in selectors.REVIEW_BLOCK:
+        found = soup.select(sel)
+        if found:
+            block = found[0]
+            break
+
+    print("\n" + "=" * 70)
+    print("  RAW HTML OF THE FIRST REVIEW BLOCK")
+    print("=" * 70)
+    if block is None:
+        print("\n  No review block found at all - REVIEW_BLOCK itself is stale.\n")
+    else:
+        text = block.prettify()
+        limit = args.chars
+        print(text[:limit])
+        if len(text) > limit:
+            print(f"\n  ... truncated ({len(text)} chars total, "
+                  f"use --chars {len(text)} to see it all)")
+
+    print("\n  Copy the working selector into scraper/selectors.py,")
+    print("  then re-run: python main.py test\n")
     return 0
 
 
@@ -260,6 +399,26 @@ def main():
     # --- report ---
     p = subparsers.add_parser("report", help="print the M1 completeness report")
     p.set_defaults(func=cmd_report)
+
+    # --- refresh-reviews ---
+    p = subparsers.add_parser("refresh-reviews",
+                              help="re-fetch reviews for already-collected products")
+    p.add_argument("--status", action="store_true",
+                   help="show how many products have review text")
+    p.add_argument("--apply", action="store_true",
+                   help="merge refreshed reviews into products.jsonl")
+    p.add_argument("--limit", type=int, help="only the first N products")
+    p.add_argument("--all", action="store_true",
+                   help="refresh every product, not just the empty ones")
+    p.set_defaults(func=cmd_refresh_reviews)
+
+    # --- debug-review ---
+    p = subparsers.add_parser("debug-review",
+                              help="dump a real review block's HTML to fix selectors")
+    p.add_argument("--keyword", help="keyword to pick a product from")
+    p.add_argument("--asin", help="test a specific product instead")
+    p.add_argument("--chars", type=int, default=4000, help="how much HTML to print")
+    p.set_defaults(func=cmd_debug_review)
 
     # --- spotcheck ---
     p = subparsers.add_parser("spotcheck",
