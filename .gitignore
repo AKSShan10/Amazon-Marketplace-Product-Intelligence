@@ -1,25 +1,19 @@
-# environments
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
-# raw evidence - too large for git, delivered as a separate archive
-data/raw_html/
+data/*.jsonl
+data/*.csv
+!data/keywords.csv
+data/debug/
 data/images/
-
-# generated
-data/raw/*.jsonl
-data/final/*
+data/clean/*
 logs/*.csv
-logs/*.log
-artifacts/*
-reports/*.csv
-
-# keep folders
+logs/*.txt
+models/*
 !**/.gitkeep
 
-# local
 .env
 .DS_Store
