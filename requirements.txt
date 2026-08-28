@@ -1,9 +1,8 @@
-# --- collection -------------------------------------------------------------
-selenium>=4.20.0          # 4.6+ bundles Selenium Manager (no chromedriver download)
-beautifulsoup4>=4.12.0
-lxml>=5.0.0
-requests>=2.31.0
+# Collection
+selenium>=4.20.0        # 4.6+ finds chromedriver automatically
+beautifulsoup4>=4.12.0  # reads HTML
+lxml>=5.0.0             # fast HTML engine used by BeautifulSoup
+requests>=2.31.0        # link checking
 
-# --- data -------------------------------------------------------------------
+# Data
 pandas>=2.0.0
-openpyxl>=3.1.0           # only needed if the keyword list arrives as .xlsx

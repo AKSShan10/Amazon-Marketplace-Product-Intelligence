@@ -1,0 +1,61 @@
+flowchart TB
+    START(["python main.py collect"]) --> KW["load_keywords()<br/>read data/keywords.csv"]
+    KW --> WARM["browser.warm_up()<br/>load amazon.com homepage<br/><b>FIX 3</b> - gives the session cookies"]
+
+    WARM --> LOOP{"for each<br/>keyword"}
+
+    LOOP --> SEARCH["fetch()<br/>load /s?k=keyword"]
+    SEARCH --> DIAG1{"_diagnose()"}
+
+    DIAG1 -->|"URL is /ap/signin"| BLK1["log 'blocked'<br/><b>FIX 4</b> - never interact"]
+    DIAG1 -->|"CAPTCHA text found"| BLK1
+    DIAG1 -->|"s-main-slot missing"| EMP1["log 'empty'<br/><b>FIX 5</b> - container check,<br/>not character count"]
+    DIAG1 -->|"container present"| PS["parse_search()<br/>unique ASINs, skip sponsored"]
+
+    BLK1 --> RETRY1{"attempt<br/>&lt; 3?"}
+    EMP1 --> RETRY1
+    RETRY1 -->|yes| SEARCH
+    RETRY1 -->|no| FAILKW["remember failed keyword"]
+
+    PS --> PLOOP{"for each<br/>product"}
+    PLOOP -->|"already in storage"| PLOOP
+    PLOOP --> PROD["fetch()<br/>load /dp/ASIN<br/>scroll to trigger images + video"]
+
+    PROD --> DIAG2{"_diagnose()"}
+    DIAG2 -->|"blocked / empty"| BLK2["log with a plain-English reason"]
+    BLK2 --> RETRY2{"attempt<br/>&lt; 3?"}
+    RETRY2 -->|yes| PROD
+    RETRY2 -->|no| FAILP["remember failed ASIN"]
+    FAILP --> PLOOP
+
+    DIAG2 -->|"success"| PARSE["parse_product()<br/>title, brand, price, rating,<br/>bullets, image, video, reviews"]
+    PARSE --> SAVE[("storage.save()<br/>append one line to<br/>products.jsonl")]
+    SAVE --> PLOOP
+
+    PLOOP -->|"keyword done"| LOOP
+    LOOP -->|"all keywords done"| RETRYPASS["<b>FIX 7</b><br/>fresh browser,<br/>retry failed keywords"]
+
+    RETRYPASS --> SUMMARY["print summary<br/>save failed.json"]
+    SUMMARY --> EXPORT(["python main.py export"])
+    EXPORT --> LINKS["check every product,<br/>image and video URL"]
+    LINKS --> NULLV["null any dead video_url<br/>(has_video + video_page_url<br/>still carry the info)"]
+    NULLV --> CSV[("products.csv<br/>1 row per product,<br/>reviews as JSON array")]
+    CSV --> REPORT(["python main.py report<br/>coverage + null rates"])
+
+    HEALTH["<b>Browser health</b><br/>FIX 1 - restart after 3 errors in a row<br/>FIX 2 - script timeout stops hangs<br/>FIX 6 - liveness probe before each request"]
+    HEALTH -.watches.-> SEARCH
+    HEALTH -.watches.-> PROD
+
+    LOG[("logs/request_log.csv<br/>one row per attempt,<br/>with a reason")]
+    SEARCH -.-> LOG
+    PROD -.-> LOG
+
+    classDef fix fill:#F7E6D2,stroke:#B8620B,stroke-width:2px,color:#16202E
+    classDef store fill:#DDEEEA,stroke:#0F7F6C,stroke-width:2px,color:#16202E
+    classDef gate fill:#FFFFFF,stroke:#16202E,stroke-width:1.5px,color:#16202E
+    classDef step fill:#E4EAF1,stroke:#2E5C8A,stroke-width:1.5px,color:#16202E
+
+    class BLK1,EMP1,RETRYPASS,HEALTH,WARM fix
+    class SAVE,CSV,LOG store
+    class DIAG1,DIAG2,RETRY1,RETRY2,LOOP,PLOOP gate
+    class KW,PS,PROD,PARSE,SEARCH,LINKS,NULLV,SUMMARY,FAILKW,FAILP,BLK2 step
