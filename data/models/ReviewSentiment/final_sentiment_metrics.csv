@@ -1,0 +1,9 @@
+﻿,value
+total_reviews,9251
+gemini_labelled,9251
+gemini_coverage,1.0
+manual_reviews,60
+manual_accuracy,0.85
+manual_macro_f1,0.7182498159128783
+manual_kappa,0.7422434367541766
+selected_model,Gemini: gemini-3.5-flash-lite

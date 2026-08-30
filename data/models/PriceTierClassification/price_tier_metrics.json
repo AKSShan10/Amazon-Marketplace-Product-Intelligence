@@ -1,0 +1,14 @@
+{
+  "accuracy": 0.5822784810126582,
+  "macro_f1": 0.5840202076235633,
+  "mean_absolute_tier_error": 0.5253164556962026,
+  "severe_error_rate": 0.10759493670886076,
+  "selected_model": "linear_svm",
+  "selected_parameters": {
+    "classifier__C": 2.0
+  },
+  "selection_cv_macro_f1": 0.48323349904225826,
+  "labelled_products": 786,
+  "missing_price_prediction_products": 73,
+  "tier_definition": "category-and-currency-relative unique-price 33rd/67th percentiles"
+}

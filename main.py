@@ -130,6 +130,38 @@ def cmd_report(args):
     return 0
 
 
+def cmd_clean(args):
+    """Run the shared cleaning pipeline."""
+    from analysis.cleaning import load_and_clean
+    products, reviews = load_and_clean(detect_lang=not args.skip_lang)
+    print(f"\n  Ready for analysis: {len(products)} products, {len(reviews)} reviews")
+    return 0
+
+
+def cmd_label(args):
+    """Label reviews using Gemini Flash models."""
+    from analysis.cleaning import load_clean
+    from analysis.labelling import (
+        create_manual_annotation_template, label_all_reviews, labelling_status,
+    )
+
+    products, reviews = load_clean()
+
+    if args.status:
+        labelling_status(reviews)
+        return 0
+
+    if args.manual_template:
+        create_manual_annotation_template(reviews, n_per_class=args.per_class)
+        return 0
+
+    reviews = label_all_reviews(
+        reviews, model=args.model, batch_size=args.batch, save=True,
+    )
+    labelling_status(reviews)
+    return 0
+
+
 def cmd_refresh_reviews(args):
     """
     Re-fetch only the reviews for products already collected.
@@ -399,6 +431,27 @@ def main():
     # --- report ---
     p = subparsers.add_parser("report", help="print the M1 completeness report")
     p.set_defaults(func=cmd_report)
+
+    # --- clean ---
+    p = subparsers.add_parser("clean", help="run the shared cleaning pipeline")
+    p.add_argument("--skip-lang", action="store_true",
+                   help="skip language detection (faster)")
+    p.set_defaults(func=cmd_clean)
+
+    # --- label ---
+    p = subparsers.add_parser("label",
+                              help="label reviews using Gemini Flash")
+    p.add_argument("--status", action="store_true",
+                   help="show labelling progress")
+    p.add_argument("--manual-template", action="store_true",
+                   help="create a balanced real-review manual annotation sheet")
+    p.add_argument("--per-class", type=int, default=100,
+                   help="manual reviews per weak-label class")
+    p.add_argument("--model", default="gemini-3.5-flash-lite",
+                   help="Gemini model for optional batch labelling")
+    p.add_argument("--batch", type=int, default=25,
+                   help="reviews per API call (default: 25)")
+    p.set_defaults(func=cmd_label)
 
     # --- refresh-reviews ---
     p = subparsers.add_parser("refresh-reviews",

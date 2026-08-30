@@ -2,12 +2,15 @@
 
 Scrapes product and review data from **amazon.com** for 28 assigned search
 keywords, collecting product information, images, video links, and customer
-reviews from every unique listing on page 1 of each search result.
+reviews from every unique listing on page 1 of each search result. Then
+analyses the collected data through four analytical features covering
+recommendation, sentiment, visual grouping, and price classification.
 
-**Part A (data collection) is complete and verified.** Parts B (analysis and
-model development) and C (Streamlit application) have folders waiting.
+**Part A (data collection) is complete and verified.**
+**Part B (analysis and model development) is complete.**
+**Part C (Streamlit application) is complete.**
 
-### Completed run
+### Completed run — Part A
 
 | Metric | Value |
 |---|---|
@@ -19,6 +22,15 @@ model development) and C (Streamlit application) have folders waiting.
 | Image links validated | 859 / 859 ok |
 | Video direct links | 600 ok |
 | Images downloaded | 859 files, 132 MB |
+
+### Part B — Analytical Features
+
+| Feature | Method | Status |
+|---|---|---|
+| A — Similar Product Recommendation | Semantic AI, TF-IDF, BM25 compared | ✅ Complete |
+| B — Review Sentiment Analysis | Gemini API + local TF-IDF fallback | ✅ Complete |
+| C — Thumbnail Grouping | CNN + colour embeddings, K-Means/Agglom/DBSCAN | ✅ Complete |
+| D — Price Tier Classification | Logistic Regression / SVM on non-price features | ✅ Complete |
 
 ---
 
@@ -74,22 +86,71 @@ amazon-intelligence/
 │   ├── collect.py           the conductor
 │   └── logs.py              crash-proof request logging
 │
-├── analysis/                ── PART B ── days 3–5
-├── notebooks/               ── PART B ── days 3–5
-├── app/                     ── PART C ── day 6
+├── analysis/                ── PART B ── complete
+│   ├── cleaning.py          shared cleaning pipeline, load_clean() / load_and_clean()
+│   ├── labelling.py         low-quota Gemini helpers and manual ground-truth utilities
+│   ├── labelling_model2.py  production Gemini labeller (gemini-3.6-flash + 3.5-flash-lite)
+│   ├── sentiment_checkpointed.py   durable checkpointing, prepare_reviews(), summaries
+│   ├── image_grouping.py    Feature C: embedding, clustering, evaluation, plotting
+│   └── price_tiers.py       Feature D: tier rules, model comparison, tuning, evaluation
+│
+├── notebooks/               ── PART B ── complete
+│   ├── 00_cleaning_eda.ipynb          Data cleaning and exploratory analysis
+│   ├── 01_Feature_A_Recommendation.ipynb   Similar product recommendation
+│   ├── 02_Feature_B_Sentiment.ipynb        Review sentiment analysis
+│   ├── 03_Feature_C_Thumbnail_Grouping.ipynb   Image-based product grouping
+│   └── 04_Feature_D_Price_Tier.ipynb       Price tier classification
+│
+├── app/                     ── PART C ── complete
+│   └── app.py               Streamlit application (all four features)
 │
 ├── data/
 │   ├── keywords.csv         input: 28 search keywords
 │   ├── products.jsonl       master file + resume state
 │   ├── products.csv         THE M1 DELIVERABLE
 │   ├── images/              859 downloaded images + manifest.csv
-│   └── clean/               Part B outputs
+│   ├── clean/               cleaned parquet files (products + reviews)
+│   ├── checkpoints/         Gemini labelling checkpoints (Feature B)
+│   └── models/              saved models for each feature
+│       ├── SimilarProductRecommendation/
+│       │   ├── semantic_embeddings.pkl
+│       │   ├── tfidf_model.pkl
+│       │   ├── bm25_model.pkl
+│       │   └── algorithm_comparison.png
+│       ├── ReviewSentiment/
+│       │   ├── reviews_with_sentiment.parquet
+│       │   ├── reviews_with_sentiment.csv
+│       │   ├── sentiment_by_product.csv
+│       │   ├── sentiment_by_category.csv
+│       │   ├── sentiment_model_comparison.csv
+│       │   ├── final_sentiment_metrics.csv
+│       │   ├── fine_tuned_sentiment_model.joblib
+│       │   ├── selected_model.txt
+│       │   ├── manual_validation_results.csv
+│       │   └── sentiment_eda.png
+│       ├── ThumbnailGrouping/
+│       │   ├── thumbnail_groups.csv
+│       │   ├── visual_group_descriptions.csv
+│       │   ├── clustering_model.joblib
+│       │   ├── resnet18_embeddings.npy
+│       │   ├── color_features.npy
+│       │   ├── thumbnail_features.npz
+│       │   ├── clustering_metric_comparison.png
+│       │   ├── final_group_sizes_and_projection.png
+│       │   └── category_validation_heatmap.png
+│       └── PriceTierClassification/
+│           ├── price_tier_model.joblib
+│           ├── price_tier_predictions.csv
+│           ├── price_tier_rules.csv
+│           ├── price_tier_metrics.json
+│           ├── model_comparison.png
+│           ├── test_confusion_matrix.png
+│           └── top_model_features.png
 │
 ├── logs/
 │   ├── request_log.csv      audit trail, one row per attempt, with reason
 │   └── run.txt              human-readable run log
 │
-├── models/                  saved models the app will load
 └── docs/
     ├── data_flow.html       pipeline diagram (two figures)
     └── clarifications_log.md
@@ -124,7 +185,7 @@ review bodies to come back null.
 
 ## 4. Commands
 
-### Collection
+### Collection (Part A)
 
 | Command | What it does |
 |---|---|
@@ -408,7 +469,172 @@ blocks. Product link checks also deliberately slow and single-threaded.
 
 ---
 
-## 14. Known gaps
+## 14. Part B — Analysis and model development
+
+All four features follow the pipeline defined in Section 3.2: preprocessing,
+EDA, interpretation, model development and comparison, fine-tuning, and final
+selection. Each feature has its own notebook in `notebooks/`.
+
+### Data pipeline
+
+```
+data/products.jsonl
+    ↓  analysis/cleaning.py → load_and_clean(save=True)
+data/clean/products_clean.parquet
+data/clean/reviews_clean.parquet
+    ↓  each feature notebook reads via load_clean()
+Feature A  →  data/models/SimilarProductRecommendation/
+Feature B  →  data/models/ReviewSentiment/
+Feature C  →  data/models/ThumbnailGrouping/
+Feature D  →  data/models/PriceTier/
+```
+
+### Feature A — Similar Product Recommendation
+
+Takes a product (ASIN) or search term. Returns a ranked list of similar
+products with a relevance reason for each. Deterministic: same input → same
+output.
+
+| What | Detail |
+|---|---|
+| Input | Product ASIN or free-text search term |
+| Algorithms compared | Semantic AI (all-MiniLM-L6-v2), TF-IDF, BM25 |
+| Evaluation metrics | Precision@5, MRR, Brand Match Rate |
+| Fine-tuning | TF-IDF unigram vs bigram, BM25 k1/b parameter sweep |
+| Output | Ranked list with content-aware relevance reasons |
+
+### Feature B — Review Sentiment Analysis
+
+Classifies each review as positive, neutral, or negative. Reviews arrive
+without sentiment labels — the labelling strategy is fully documented.
+
+| What | Detail |
+|---|---|
+| Analysis modules | `labelling_model2.py` (GeminiLabeller) + `sentiment_checkpointed.py` (checkpointing) |
+| Primary labeller | Gemini API (gemini-3.6-flash) with checkpointing |
+| Fallback labeller | Fine-tuned Char TF-IDF + Logistic Regression (local, no API) |
+| Silver labels | Star-rating heuristic (1–2 negative, 3 neutral, 4–5 positive) |
+| Ground truth | 60 manually labelled reviews with interactive tool |
+| Models compared | Gemini, Word TF-IDF+LR, Char TF-IDF+LR, Fine-tuned Char TF-IDF+LR |
+| Fine-tuning | GridSearchCV on ngram_range and C, 3-fold stratified CV |
+| Selection | Composite score: manual F1, multilingual F1, silver F1, kappa |
+| Output | Per-product and per-category sentiment summaries |
+| Languages | All languages kept — multilingual pilot validates non-English accuracy |
+
+**API quota note:** Gemini labelling is checkpointed. If the API key runs out,
+swap the key and rerun — existing labels are reused automatically. If Gemini
+cannot reach full coverage, the local TF-IDF model provides 100% coverage as
+fallback.
+
+### Feature C — Thumbnail Grouping
+
+Groups product images into visual clusters without using category labels.
+Category labels are used only after grouping to validate whether groups make
+sense.
+
+| What | Detail |
+|---|---|
+| Features extracted | CNN embeddings (ResNet-18) + colour histograms |
+| Algorithms compared | K-Means, Agglomerative, DBSCAN × multiple K values |
+| Evaluation metrics | Silhouette, Calinski-Harabasz, Davies-Bouldin |
+| Fine-tuning | K sweep (2–30) with perturbation stability testing |
+| Validation | Category label alignment (ARI/NMI) — diagnostic only |
+| Output | Group assignments, sample images, group sizes, group descriptions |
+
+### Feature D — Price Tier Classification
+
+Classifies each product into a price tier (budget, mid-range, premium) using
+product attributes — **never the price itself**.
+
+| What | Detail |
+|---|---|
+| Tier labels | 33rd/67th percentile of price within category+currency (training only) |
+| Features used | TF-IDF text, brand, category, availability, rating, review count, rank |
+| Leakage prevention | FORBIDDEN set assertion excludes all price columns; price text stripped |
+| Models compared | Dummy baseline, Logistic Regression, Linear SVM, SGD — 5-fold stratified CV |
+| Fine-tuning | GridSearchCV on regularization strength (C) |
+| Evaluation | Macro-F1, ordinal error analysis, per-category breakdown |
+| Output | Tier predictions for all products including those with missing prices |
+
+### Module dependency map
+
+| Notebook | analysis/ modules used |
+|---|---|
+| 00_cleaning_eda | `cleaning.py` — load_raw(), clean_products(), clean_reviews() |
+| 01_Feature_A | `cleaning.py` — load_clean() |
+| 02_Feature_B | `cleaning.py` — load_clean(); `labelling_model2.py` — GeminiLabeller, resolve_model_name; `sentiment_checkpointed.py` — prepare_reviews, label_with_checkpoint, sentiment_summaries |
+| 03_Feature_C | `image_grouping.py` — build_image_index, audit_image_quality, extract_cnn_embeddings, extract_color_features, compare_clusterings, add_stability_scores, select_best_clustering, plot_group_samples, describe_groups, validate_with_categories, save_grouping, quality_outliers, reduce_features, representative_indices |
+| 04_Feature_D | `price_tiers.py` — prepare_products, missingness_table, split_for_evaluation, fit_tier_rules, apply_tier_rules, model_frame, candidate_models, compare_models, tune_linear_candidates, choose_search, evaluate, top_linear_features, save_artifacts, refit_for_deployment |
+
+**Note:** `labelling.py` (without the `_model2` suffix) is an alternative low-quota labeller with manual annotation template support. Feature B's notebook imports from `labelling_model2.py`, not `labelling.py`.
+
+### Running the notebooks
+
+Notebooks are designed for Google Colab. Mount Google Drive, set the `PROJECT`
+path, and run top to bottom. Feature B additionally requires a `GEMINI_API_KEY`
+environment variable.
+
+---
+
+## 15. Part C — Streamlit Application
+
+A single Streamlit application that runs on top of the collected and analysed
+data. All four features are accessible from the sidebar.
+
+### Application pages
+
+| Page | What it does |
+|---|---|
+| 📦 Product List | Browsable grid of all 859 products with images, search, and category filter. Click any product to see full details (title, brand, price, rating, image, reviews, sentiment chart, price tier). |
+| 🔍 A: Similar Products | Enter a product ASIN or free-text search term. Returns ranked recommendations from all three algorithms (Semantic AI, TF-IDF, BM25) with relevance scores, displayed in separate tabs with product images. |
+| 💬 B: Review Sentiment | Browse sentiment summaries by category (stacked bar chart) and by product (searchable table). Expandable model details section shows the selected model, comparison metrics, and validation results. |
+| 🖼️ C: Thumbnail Groups | Visual group sizes chart, group descriptions table, and an interactive browser showing sample images for each group. Expandable section displays the clustering analysis visualizations. |
+| 💰 D: Price Tiers | Overview metrics (budget/mid-range/premium counts), pie chart, per-category stacked bar chart, and a tier browser with category filtering. Expandable section shows model performance and feature importance. |
+
+### Running locally
+
+```bash
+cd Amazon-Marketplace-Product-Intelligence
+pip install -r requirements.txt
+streamlit run app/app.py
+```
+
+The app opens at `http://localhost:8501`.
+
+**Prerequisites:** all four feature notebooks must have been run so that saved
+models and output files exist in `data/models/`. All dependencies (collection,
+analysis, and app) are in the single project-level `requirements.txt`.
+
+### Deploying to Streamlit Cloud
+
+1. Push the entire project to a GitHub repository.
+2. Go to [share.streamlit.io](https://share.streamlit.io).
+3. Connect the repository.
+4. Set the main file path to `app/app.py`.
+5. Deploy.
+
+**Note:** Feature A's text search (not ASIN search) requires `sentence-transformers`
+to encode new queries at runtime. The first text query will take a few seconds
+while the model loads. ASIN queries use pre-computed embeddings and are instant.
+
+### Application dependencies
+
+The app requires these packages (all included in the project `requirements.txt`):
+
+| Package | Used by |
+|---|---|
+| `streamlit` | Application framework |
+| `plotly` | Interactive charts (sentiment, grouping, price tiers) |
+| `pandas`, `numpy` | Data handling |
+| `sentence-transformers` | Feature A: encoding text queries |
+| `rank-bm25` | Feature A: BM25 search |
+| `scikit-learn` | Feature A: TF-IDF cosine similarity |
+| `Pillow` | Loading product thumbnail images |
+| `joblib` | Loading saved models (Feature B, C, D) |
+
+---
+
+## 16. Known gaps
 
 | Gap | Status |
 |---|---|
@@ -416,4 +642,3 @@ blocks. Product link checks also deliberately slow and single-threaded.
 | M1 raw evidence | Raw HTML not saved — keep the folder from the original run if available |
 | Reviews behind sign-in | Public product-page reviews only (clarification Q9) |
 | Price 8.4% missing | Explained by `price_status`: 794 available, 56 variant-only (price appears after selecting size/colour), 17 unknown (empty pages). Zero unexplained gaps |
-| Parts B and C | Not started — days 3–6 |
