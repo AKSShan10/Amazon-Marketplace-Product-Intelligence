@@ -260,10 +260,21 @@ def compare_clusterings(color_features, cnn_features, combined_features=None, k_
 
 
 def add_stability_scores(results, fitted, top_n=18, runs=5, noise_scale=0.01):
-    """Perturb features and measure ARI agreement for the strongest candidates."""
+    """Perturb features and measure ARI agreement for the strongest candidates.
+
+    Tests the best candidate per K value (not just overall top-N by silhouette)
+    so that high-K solutions get stability scores too.
+    """
     updated = results.copy()
-    eligible = updated[(updated["smallest_group"] >= 10) & (updated["largest_group_share"] <= 0.60)]
-    candidate_rows = eligible.sort_values("silhouette", ascending=False).head(top_n)
+    size_ok = updated[(updated["smallest_group"] >= 3) & (updated["largest_group_share"] <= 0.50)]
+    if size_ok.empty:
+        size_ok = updated
+
+    # Select best candidate PER K value, then take top_n overall.
+    # This ensures high-K solutions are tested, not just low-K ones.
+    per_k_best = size_ok.sort_values("silhouette", ascending=False).drop_duplicates("k", keep="first")
+    candidate_rows = per_k_best.sort_values("silhouette", ascending=False).head(top_n)
+
     for row_index, row in candidate_rows.iterrows():
         key = (row["approach"], int(row["k"]))
         baseline = fitted[key]["labels"]
@@ -284,21 +295,42 @@ def add_stability_scores(results, fitted, top_n=18, runs=5, noise_scale=0.01):
     return updated
 
 
-def select_best_clustering(results, fitted, min_group_size=10, max_group_share=0.60, min_stability=0.70):
-    """Select highest silhouette after size, collapse, and stability checks."""
-    eligible = results[
-        (results["smallest_group"] >= min_group_size)
-        & (results["largest_group_share"] <= max_group_share)
+def select_best_clustering(results, fitted, min_group_size=5, max_group_share=0.40, min_stability=0.50, min_k=12):
+    """Select best clustering with a minimum K floor.
+
+    Internal metrics (silhouette, Davies-Bouldin, etc.) inherently favour
+    fewer clusters.  For a catalogue with genuine visual diversity (28
+    categories, 859 images), a minimum K prevents the algorithm from
+    collapsing everything into 3-5 super-groups.  Within the eligible
+    K range, the best silhouette is chosen.
+    """
+    # Apply minimum K
+    pool = results[results["k"] >= min_k]
+    if pool.empty:
+        pool = results
+
+    # Size constraints
+    eligible = pool[
+        (pool["smallest_group"] >= min_group_size)
+        & (pool["largest_group_share"] <= max_group_share)
     ]
     if eligible.empty:
-        eligible = results
-    stable = eligible[eligible["stability_mean_ari"].notna() & (eligible["stability_mean_ari"] >= min_stability)]
+        eligible = pool
+
+    # Prefer stable solutions if available
+    stable = eligible[
+        eligible["stability_mean_ari"].notna()
+        & (eligible["stability_mean_ari"] >= min_stability)
+    ]
     if not stable.empty:
         eligible = stable
+
+    # Among eligible, pick best silhouette (now comparing within same K range)
     winner = eligible.sort_values(
-        ["silhouette", "stability_mean_ari", "davies_bouldin", "k"],
-        ascending=[False, False, True, True],
+        ["silhouette", "stability_mean_ari", "davies_bouldin"],
+        ascending=[False, False, True],
     ).iloc[0]
+
     return winner, fitted[(winner["approach"], int(winner["k"]))]
 
 
