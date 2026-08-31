@@ -475,18 +475,56 @@ All four features follow the pipeline defined in Section 3.2: preprocessing,
 EDA, interpretation, model development and comparison, fine-tuning, and final
 selection. Each feature has its own notebook in `notebooks/`.
 
-### Data pipeline
+### Data flow diagram
 
 ```
-data/products.jsonl
-    ↓  analysis/cleaning.py → load_and_clean(save=True)
-data/clean/products_clean.parquet
-data/clean/reviews_clean.parquet
-    ↓  each feature notebook reads via load_clean()
-Feature A  →  data/models/SimilarProductRecommendation/
-Feature B  →  data/models/ReviewSentiment/
-Feature C  →  data/models/ThumbnailGrouping/
-Feature D  →  data/models/PriceTier/
+                    ┌──────────────────────────────┐
+                    │   Amazon.com (28 keywords)    │
+                    └──────────────┬───────────────┘
+                                   │
+                    ┌──────────────▼───────────────┐
+          PART A    │   Scraper (main.py collect)   │
+                    │   859 products, 9886 reviews  │
+                    │   859 images, 600 videos      │
+                    └──────────────┬───────────────┘
+                                   │
+                    ┌──────────────▼───────────────┐
+                    │  products.jsonl + images/     │
+                    └──────────────┬───────────────┘
+ ───────────────────────────────── │ ──────────────────────────────
+                    ┌──────────────▼───────────────┐
+          PART B    │  cleaning.py                  │
+                    │  Dedup, text clean, lang       │
+                    │  detect, star sentiment        │
+                    └──────────────┬───────────────┘
+                                   │
+                    ┌──────────────▼───────────────┐
+                    │  products_clean.parquet       │
+                    │  reviews_clean.parquet        │
+                    │  859 products, 9251 reviews   │
+                    └──┬────────┬────────┬────────┬┘
+                       │        │        │        │
+              ┌────────▼──┐ ┌──▼──────┐ ┌▼───────┐ ┌▼────────┐
+              │ Feature A  │ │Feature B│ │Feature C│ │Feature D │
+              │ Recommend  │ │Sentiment│ │Grouping │ │Price Tier│
+              │            │ │         │ │         │ │          │
+              │ Semantic   │ │ Gemini  │ │ResNet18 │ │Logistic  │
+              │ TF-IDF     │ │ TF-IDF  │ │ Color   │ │  Reg     │
+              │ BM25       │ │   +LR   │ │ KMeans  │ │SVM, SGD  │
+              └────────┬───┘ └───┬─────┘ └───┬────┘ └───┬──────┘
+                       │         │           │           │
+              ┌────────▼───┐ ┌───▼─────┐ ┌───▼────┐ ┌───▼──────┐
+              │.pkl models │ │sentiment│ │groups  │ │predictions│
+              │embeddings  │ │CSVs     │ │CSV+.npy│ │CSV+.joblib│
+              └────────┬───┘ └───┬─────┘ └───┬────┘ └───┬──────┘
+                       │         │           │           │
+ ───────────────────── │ ─────── │ ───────── │ ───────── │ ──────
+                       └─────────┴───────────┴───────────┘
+                                       │
+                        ┌──────────────▼───────────────┐
+              PART C    │   Streamlit app (app.py)     │
+                        │   Products, Details, A,B,C,D │
+                        └──────────────────────────────┘
 ```
 
 ### Feature A — Similar Product Recommendation
@@ -545,6 +583,22 @@ sense.
 
 Classifies each product into a price tier (budget, mid-range, premium) using
 product attributes — **never the price itself**.
+
+**How tiers are defined:** `fit_tier_rules()` computes tie-safe 33rd and 67th
+percentile price cutoffs *within each category+currency group* from the
+training split only. This means a "budget laptop" is not compared against a
+"budget candle" — tiers are relative to the product's own category.
+
+```
+Within each (category, currency) group:
+  budget    = price ≤ 33rd percentile
+  mid_range = 33rd percentile < price ≤ 67th percentile
+  premium   = price > 67th percentile
+```
+
+Example: if USB-C hubs in USD range from $12 to $80, the cutoffs might be
+$28 (33rd) and $48 (67th). A $25 hub is budget, a $35 hub is mid-range, a
+$60 hub is premium — all relative to the USB-C hub category.
 
 | What | Detail |
 |---|---|
